@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Command Center</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
+<style>
+:root{
+  --bg:#f5f6f8;--card:#fff;--ink:#14171c;--muted:#6b7280;--line:#e3e6ea;
+  --accent:#2f6fed;--accent-ink:#fff;--ok:#1f9d55;--warn:#c2410c;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1115;--card:#181b21;--ink:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;
+  --accent:#5b8cff;--accent-ink:#0b0d10;--ok:#3ecf7a;--warn:#fb923c;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 8px;border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0 0 8px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:999px;padding:5px 12px;font-size:14px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+main{padding:12px 16px calc(env(safe-area-inset-bottom) + 90px);max-width:720px;margin:0 auto}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+textarea,input,select{width:100%;font:inherit;color:var(--ink);background:var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:10px}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.row>*{flex:1}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--line);color:var(--ink)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.small{padding:4px 10px;font-size:13px}
+.item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item input[type=checkbox]{width:22px;height:22px;flex:none;margin-top:1px}
+.item .body{flex:1;min-width:0;white-space:pre-wrap;word-wrap:break-word}
+.item.done .body{text-decoration:line-through;color:var(--muted)}
+.meta{font-size:12px;color:var(--muted);margin-top:3px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);margin-right:4px}
+.tag.out{color:var(--ok);border-color:var(--ok)}
+.muted{color:var(--muted);font-size:14px}
+.empty{color:var(--muted);text-align:center;padding:20px 0}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.tool{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:14px 12px;font-weight:600}
+.tool small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
+pre{white-space:pre-wrap;word-wrap:break-word;background:var(--bg);border:1px solid var(--line);
+  border-radius:10px;padding:10px;font-size:13px;max-height:280px;overflow:auto}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:5;display:flex;background:var(--card);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border-radius:0;padding:10px 0 12px;font-size:12px;color:var(--muted)}
+nav button b{display:block;font-size:20px;line-height:1.2}
+nav button.on{color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:8px 14px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+label.inline{display:flex;gap:8px;align-items:center;font-size:14px}
+label.inline input{width:auto}
+h2{font-size:15px;margin:4px 0 8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Command Center</h1>
+  <div class="chips" id="projChips"></div>
+</header>
+
+<main>
+  <!-- CAPTURE -->
+  <section id="v-capture" class="on">
+    <div class="card">
+      <textarea id="capText" placeholder="Dump it here: a task, a note, meeting notes, a link…"></textarea>
+      <div class="row">
+        <select id="capType">
+          <option value="task">Task</option>
+          <option value="note">Note</option>
+          <option value="link">Link</option>
+        </select>
+        <select id="capProj"></select>
+      </div>
+      <div class="row"><button class="primary" id="capSave">Save</button></div>
+    </div>
+    <div class="card"><h2>Recent</h2><div id="recent"></div></div>
+  </section>
+
+  <!-- TASKS -->
+  <section id="v-tasks">
+    <div class="card">
+      <label class="inline"><input type="checkbox" id="showDone"> Show completed</label>
+      <div id="taskList" style="margin-top:6px"></div>
+    </div>
+  </section>
+
+  <!-- NOTES -->
+  <section id="v-notes">
+    <div class="card">
+      <input id="noteSearch" placeholder="Search notes & links…">
+      <div id="noteList" style="margin-top:6px"></div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="v-tools">
+    <p class="muted">One-tap launchers for the apps and sites you use on your phone.</p>
+    <div class="tools" id="toolGrid"></div>
+    <div class="card" style="margin-top:12px">
+      <h2>Add a tool</h2>
+      <input id="toolName" placeholder="Name (e.g. ChatGPT)">
+      <div class="row"><input id="toolUrl" placeholder="URL (https://…)"></div>
+      <div class="row"><input id="toolNote" placeholder="What I use it for (optional)"></div>
+      <div class="row"><button class="primary" id="toolAdd">Add</button></div>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section id="v-export">
+    <div class="card">
+      <h2>Send to work computer</h2>
+      <div class="row">
+        <select id="exScope">
+          <option value="new">Not yet exported</option>
+          <option value="today">Created today</option>
+          <option value="open">All open tasks</option>
+          <option value="all">Everything</option>
+        </select>
+        <select id="exFmt">
+          <option value="md">Markdown</option>
+          <option value="txt">Plain text</option>
+          <option value="csv">CSV (Excel)</option>
+        </select>
+      </div>
+      <div class="row">
+        <select id="exProj"></select>
+      </div>
+      <pre id="exPreview"></pre>
+      <div class="row">
+        <button class="primary" id="exCopy">Copy</button>
+        <button id="exShare">Share…</button>
+      </div>
+      <div class="row">
+        <button id="exEmail">Email</button>
+        <button id="exFile">Download</button>
+      </div>
+      <label class="inline" style="margin-top:10px"><input type="checkbox" id="exMark" checked> Mark these as exported</label>
+      <p class="muted">Copy works with any paste target, such as a phone-to-PC clipboard app, an email draft or a chat you send to yourself. Share opens your phone's share sheet.</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="v-settings">
+    <div class="card">
+      <h2>Projects</h2>
+      <div id="projList"></div>
+      <div class="row"><input id="projName" placeholder="New project (e.g. Etsy shop)"><button class="primary" id="projAdd" style="flex:none">Add</button></div>
+    </div>
+    <div class="card">
+      <h2>Export email</h2>
+      <input id="setEmail" type="email" placeholder="Address the Email button sends to">
+      <p class="muted">Leave blank to pick a recipient each time.</p>
+    </div>
+    <div class="card">
+      <h2>Backup</h2>
+      <p class="muted">Everything is stored only in this browser on this phone. Back up now and then, because clearing your browser data erases it.</p>
+      <div class="row"><button id="bkSave">Download backup</button><button id="bkLoad">Restore</button></div>
+      <input type="file" id="bkFile" accept="application/json" hidden>
+    </div>
+  </section>
+</main>
+
+<nav id="nav">
+  <button data-v="capture" class="on"><b>＋</b>Capture</button>
+  <button data-v="tasks"><b>☑</b>Tasks</button>
+  <button data-v="notes"><b>✎</b>Notes</button>
+  <button data-v="tools"><b>⚡</b>Tools</button>
+  <button data-v="export"><b>⇪</b>Export</button>
+  <button data-v="settings"><b>⚙</b>Setup</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'cc.v1';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+const DEFAULT = {
+  projects: ['Work', 'Side project', 'Personal'],
+  items: [],   // {id,type,text,project,done,created,exported}
+  tools: [
+    {name:'ChatGPT', url:'https://chat.openai.com', note:'Drafting & brainstorming'},
+    {name:'Claude', url:'https://claude.ai', note:'Writing & analysis'},
+    {name:'Google Drive', url:'https://drive.google.com', note:'Personal files'},
+    {name:'Notion', url:'https://notion.so', note:'Side project docs'}
+  ],
+  email: ''
+};
+
+let db;
+try { db = Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem(KEY) || 'null') || {}); }
+catch { db = structuredClone(DEFAULT); }
+let filter = 'All';
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { toast('Could not save — storage blocked'); } }
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),1600); }
+const fmtDate = ts => new Date(ts).toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+const inFilter = it => filter === 'All' || it.project === filter;
+
+/* ---------- navigation ---------- */
+$('#nav').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 'v-' + b.dataset.v));
+  render();
+};
+
+/* ---------- render ---------- */
+function render(){
+  const opts = db.projects.map(p => `<option>${esc(p)}</option>`).join('');
+  $('#projChips').innerHTML = ['All', ...db.projects].map(p =>
+    `<button class="chip${p===filter?' on':''}" data-p="${esc(p)}">${esc(p)}</button>`).join('');
+  const capSel = $('#capProj').value;
+  $('#capProj').innerHTML = opts;
+  $('#capProj').value = db.projects.includes(capSel) ? capSel : (filter !== 'All' ? filter : db.projects[0]);
+  const exSel = $('#exProj').value;
+  $('#exProj').innerHTML = `<option value="All">All projects</option>` + opts;
+  $('#exProj').value = exSel || filter;
+
+  const recent = db.items.filter(inFilter).slice(-8).reverse();
+  $('#recent').innerHTML = recent.length ? recent.map(itemHTML).join('') : `<div class="empty">Nothing captured yet.</div>`;
+
+  const showDone = $('#showDone').checked;
+  const tasks = db.items.filter(i => i.type === 'task' && inFilter(i) && (showDone || !i.done)).reverse();
+  $('#taskList').innerHTML = tasks.length ? tasks.map(itemHTML).join('') : `<div class="empty">No open tasks.</div>`;
+
+  const q = $('#noteSearch').value.toLowerCase();
+  const notes = db.items.filter(i => i.type !== 'task' && inFilter(i) && (!q || i.text.toLowerCase().includes(q))).reverse();
+  $('#noteList').innerHTML = notes.length ? notes.map(itemHTML).join('') : `<div class="empty">No notes.</div>`;
+
+  $('#toolGrid').innerHTML = db.tools.map((t, i) =>
+    `<a class="tool" href="${esc(t.url)}" target="_blank" rel="noopener" data-ti="${i}">${esc(t.name)}<small>${esc(t.note||'')}</small></a>`).join('');
+
+  $('#projList').innerHTML = db.projects.map((p, i) =>
+    `<div class="item"><div class="body">${esc(p)}</div><button class="small" data-delproj="${i}">Remove</button></div>`).join('');
+  $('#setEmail').value = db.email || '';
+
+  renderExport();
+}
+
+function itemHTML(it){
+  const body = it.type === 'link'
+    ? it.text.replace(/(https?:\/\/[^\s]+)/g, '\u0000$1\u0001').split(/[\u0000\u0001]/).map(
+        (s, i) => i % 2 ? `<a href="${esc(s)}" target="_blank" rel="noopener">${esc(s)}</a>` : esc(s)).join('')
+    : esc(it.text);
+  return `<div class="item${it.done?' done':''}">
+    ${it.type==='task' ? `<input type="checkbox" data-toggle="${it.id}" ${it.done?'checked':''}>` : ''}
+    <div class="body">${body}
+      <div class="meta"><span class="tag">${esc(it.project)}</span><span class="tag">${it.type}</span>${it.exported?'<span class="tag out">exported</span>':''}${fmtDate(it.created)}</div>
+    </div>
+    <button class="small" data-del="${it.id}">✕</button>
+  </div>`;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.p !== undefined) { filter = t.dataset.p; render(); }
+  if (t.dataset.toggle) { const it = db.items.find(i => i.id === t.dataset.toggle); it.done = t.checked; save(); render(); }
+  if (t.dataset.del && confirm('Delete this item?')) { db.items = db.items.filter(i => i.id !== t.dataset.del); save(); render(); }
+  if (t.dataset.delproj !== undefined) {
+    const p = db.projects[+t.dataset.delproj];
+    if (db.projects.length > 1 && confirm(`Remove project "${p}"? Its items stay, still tagged "${p}".`)) {
+      db.projects.splice(+t.dataset.delproj, 1); if (filter === p) filter = 'All'; save(); render();
+    }
+  }
+});
+document.addEventListener('contextmenu', e => {   // long-press a tool to remove it
+  const a = e.target.closest('[data-ti]'); if (!a) return;
+  e.preventDefault();
+  if (confirm(`Remove "${db.tools[+a.dataset.ti].name}" from Tools?`)) { db.tools.splice(+a.dataset.ti, 1); save(); render(); }
+});
+
+$('#capSave').onclick = () => {
+  const text = $('#capText').value.trim(); if (!text) return;
+  let type = $('#capType').value;
+  if (type === 'task' && /^https?:\/\/\S+$/.test(text)) type = 'link';
+  db.items.push({id: uid(), type, text, project: $('#capProj').value, done: false, created: Date.now(), exported: false});
+  save(); $('#capText').value = ''; toast('Saved'); render();
+};
+$('#showDone').onchange = render;
+$('#noteSearch').oninput = render;
+
+$('#toolAdd').onclick = () => {
+  let url = $('#toolUrl').value.trim(); const name = $('#toolName').value.trim();
+  if (!name || !url) return toast('Name and URL needed');
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
+  db.tools.push({name, url, note: $('#toolNote').value.trim()});
+  ['#toolName','#toolUrl','#toolNote'].forEach(s => $(s).value = '');
+  save(); render(); toast('Tool added');
+};
+$('#projAdd').onclick = () => {
+  const n = $('#projName').value.trim();
+  if (!n || db.projects.includes(n)) return;
+  db.projects.push(n); $('#projName').value = ''; save(); render();
+};
+$('#setEmail').onchange = e => { db.email = e.target.value.trim(); save(); };
+
+/* ---------- export ---------- */
+function exportItems(){
+  const scope = $('#exScope').value, proj = $('#exProj').value;
+  const start = new Date(); start.setHours(0,0,0,0);
+  return db.items.filter(i => (proj === 'All' || i.project === proj) && (
+    scope === 'all' ||
+    (scope === 'new' && !i.exported) ||
+    (scope === 'today' && i.created >= start.getTime()) ||
+    (scope === 'open' && i.type === 'task' && !i.done)));
+}
+function buildExport(items, fmt){
+  const day = new Date().toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+  if (fmt === 'csv') {
+    const q = s => `"${String(s).replace(/"/g, '""')}"`;
+    return ['Project,Type,Status,Created,Text',
+      ...items.map(i => [i.project, i.type, i.type==='task'?(i.done?'Done':'Open'):'', new Date(i.created).toISOString().slice(0,16).replace('T',' '), i.text].map(q).join(','))
+    ].join('\r\n');
+  }
+  const md = fmt === 'md';
+  const out = [md ? `# Phone export — ${day}` : `PHONE EXPORT — ${day}`];
+  const byProj = {};
+  items.forEach(i => (byProj[i.project] ||= []).push(i));
+  for (const [p, list] of Object.entries(byProj)) {
+    out.push('', md ? `## ${p}` : `== ${p} ==`);
+    const tasks = list.filter(i => i.type === 'task'), other = list.filter(i => i.type !== 'task');
+    if (tasks.length) {
+      if (md) out.push('', '**Tasks**');
+      tasks.forEach(t => out.push(md ? `- [${t.done?'x':' '}] ${t.text.replace(/\n/g, '\n  ')}` : `[${t.done?'x':' '}] ${t.text}`));
+    }
+    if (other.length) {
+      if (md) out.push('', '**Notes**');
+      other.forEach(n => out.push(md ? `- ${n.text.replace(/\n/g, '\n  ')}` : `- ${n.text}`));
+    }
+  }
+  return out.join('\n');
+}
+function renderExport(){
+  const items = exportItems();
+  $('#exPreview').textContent = items.length ? buildExport(items, $('#exFmt').value) : 'Nothing matches. Change the filters above.';
+}
+['#exScope','#exFmt','#exProj'].forEach(s => $(s).onchange = renderExport);
+
+function afterExport(items){
+  if ($('#exMark').checked) { items.forEach(i => i.exported = true); save(); }
+  render();
+}
+function current(){ const items = exportItems(); return {items, text: items.length ? buildExport(items, $('#exFmt').value) : ''}; }
+
+$('#exCopy').onclick = async () => {
+  const {items, text} = current(); if (!text) return toast('Nothing to export');
+  try { await navigator.clipboard.writeText(text); }
+  catch { const r = document.createRange(); r.selectNodeContents($('#exPreview')); getSelection().removeAllRanges(); getSelection().addRange(r); document.execCommand('copy'); }
+  toast(`Copied ${items.length} item${items.length>1?'s':''}`); afterExport(items);
+};
+$('#exShare').onclick = async () => {
+  const {items, text} = current(); if (!text) return toast('Nothing to export');
+  if (!navigator.share) return toast('Sharing not supported. Use Copy instead');
+  try { await navigator.share({title: 'Phone export', text}); afterExport(items); } catch {}
+};
+$('#exEmail').onclick = () => {
+  const {items, text} = current(); if (!text) return toast('Nothing to export');
+  const subj = `Phone export ${new Date().toLocaleDateString()}`;
+  location.href = `mailto:${encodeURIComponent(db.email||'')}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`;
+  afterExport(items);
+};
+$('#exFile').onclick = () => {
+  const {items, text} = current(); if (!text) return toast('Nothing to export');
+  const fmt = $('#exFmt').value;
+  const blob = new Blob([text], {type: fmt === 'csv' ? 'text/csv' : 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `phone-export-${new Date().toISOString().slice(0,10)}.${fmt}`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  afterExport(items);
+};
+
+/* ---------- backup ---------- */
+$('#bkSave').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], {type:'application/json'}));
+  a.download = `command-center-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+};
+$('#bkLoad').onclick = () => $('#bkFile').click();
+$('#bkFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.items)) throw 0;
+    if (!confirm(`Replace current data with backup (${d.items.length} items)?`)) return;
+    db = Object.assign({}, DEFAULT, d); save(); render(); toast('Restored');
+  } catch { toast('Not a valid backup file'); }
+  e.target.value = '';
+};
+
+/* ---------- share target: text shared INTO the app lands in Capture ---------- */
+const params = new URLSearchParams(location.search);
+const shared = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean).join('\n');
+if (shared) { $('#capText').value = shared; history.replaceState(null, '', location.pathname); }
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+</script>
+</body>
+</html>
